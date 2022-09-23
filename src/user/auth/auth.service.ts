@@ -1,9 +1,8 @@
 import { ConflictException, HttpException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs'
-import { UserType } from '@prisma/client';
+import { User, UserType } from '@prisma/client';
 import * as jwt from 'jsonwebtoken'
-
 
 interface SignupParams {
     email: string;
@@ -46,13 +45,8 @@ export class AuthService {
             }
         });
 
-        const token = await jwt.sign({
-            name,
-            id: user.id
-        }, process.env.JSON_TOKEN_KEY, {
-            expiresIn: 3600000  
-        })
-        return token;
+        return this.generateJWT(name, user.id)
+        
     }
 
     async signin({email, password}: SigninParams) {
@@ -75,6 +69,8 @@ export class AuthService {
         }
 
         const token = await this.generateJWT(user.name, user.id);
+
+        return token;
     }
 
     private generateJWT(name: string, id: number) {
@@ -82,8 +78,19 @@ export class AuthService {
             {
                 name,
                 id,
-            }
-        )
+            },
+            process.env.JSON_TOKEN_KEY, 
+            {
+                expiresIn: 3600000,
+            },
+        );
+    }
+
+    generateProductKey(email: string, userType: UserType){
+        const string = `${email}-${userType}-${process.env.PRODUCT_KEY_SECRET}`
+
+        return bcrypt.hash(string, 10)
     }
 }
+
  
